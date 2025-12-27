@@ -287,6 +287,9 @@ function resetGame() {
     updateScoreUI();
     
     AudioSys.playChord(220);
+    
+    // Reset Timing
+    lastTime = 0;
 }
 
 function spawnPulse() {
@@ -447,7 +450,9 @@ function shakeScreen() {
 }
 
 // --- MAIN LOOP ---
-function loop() {
+let lastTime = 0;
+
+function loop(timestamp) {
     // Because we scaled the context, we must clear using logical dimensions
     ctx.clearRect(0, 0, width, height);
 
@@ -463,8 +468,20 @@ function loop() {
         if (shakeIntensity < 0.5) shakeIntensity = 0;
     }
 
+    // Delta Time Logic
+    if (!lastTime) lastTime = timestamp;
+    const deltaTime = timestamp - lastTime;
+    lastTime = timestamp;
+    
+    // Limit large jumps (e.g. tab switching)
+    const safeDelta = Math.min(deltaTime, 100); 
+    // Normalize to 60 FPS (16.66ms per frame)
+    const timeFactor = safeDelta / (1000 / 60);
+
     if (currentState === STATE.PLAYING) {
-        pulseTimer++;
+        // Increment timer by equivalent frames
+        pulseTimer += (1 * timeFactor);
+        
         const currentSpeed = getCurrentSpeed();
         const spawnRate = Math.max(60, 120 * (BASE_PULSE_SPEED / currentSpeed));
         
@@ -477,10 +494,11 @@ function loop() {
         ctx.lineWidth = 2;
         for (let i = pulses.length - 1; i >= 0; i--) {
             let p = pulses[i];
-            p.radius += p.speed;
+            // Move based on time
+            p.radius += p.speed * timeFactor;
             
             if (p.radius > maxRadius) {
-                p.alpha -= 0.02;
+                p.alpha -= 0.02 * timeFactor;
             }
 
             if (p.alpha <= 0) {
@@ -500,7 +518,7 @@ function loop() {
 
         // Draw Player Ring
         if (isHolding) {
-            playerRing.radius += (currentSpeed * PLAYER_GROWTH_SPEED);
+            playerRing.radius += (currentSpeed * PLAYER_GROWTH_SPEED * timeFactor);
             const currentColor = getCurrentColor();
 
             ctx.fillStyle = currentColor + '33'; 
@@ -524,7 +542,7 @@ function loop() {
     // Particles
     for (let i = particles.length - 1; i >= 0; i--) {
         let p = particles[i];
-        p.life -= 0.04;
+        p.life -= 0.04 * timeFactor;
         if (p.life <= 0) {
             particles.splice(i, 1);
             continue;
@@ -538,10 +556,10 @@ function loop() {
             ctx.arc(centerX, centerY, p.radius, 0, Math.PI * 2);
             ctx.stroke();
             ctx.globalAlpha = 1.0;
-            p.radius += 3; 
+            p.radius += 3 * timeFactor; 
         } else {
-            p.x += p.vx;
-            p.y += p.vy;
+            p.x += p.vx * timeFactor;
+            p.y += p.vy * timeFactor;
             ctx.fillStyle = p.color;
             ctx.globalAlpha = p.life;
             ctx.beginPath();
@@ -558,4 +576,4 @@ function loop() {
     requestAnimationFrame(loop);
 }
 
-loop();
+requestAnimationFrame(loop);
