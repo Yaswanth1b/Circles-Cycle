@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <title>Circle Cycles</title>
+    <meta name="title" content="Circle Cycles">
+    <meta name="description" content="Circle Cycles is a minimalist rhythm game testing your focus and precision. Hold to grow, release to align. Master the cycle, heal your health, and beat your high score.">
+    <meta name="keywords" content="rhythm game, reaction game, circle cycles, minimalist game, browser game, html5 game, focus test, timing game, indie game">
+    <meta name="author" content="Yaswanth Naidu">
+    <meta name="robots" content="index, follow">
+    <meta name="language" content="English">
+
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://circle-cycles.vercel.app/">
+    <meta property="og:title" content="Circle Cycles">
+    <meta property="og:description" content="A game where the only skill is knowing when to let go. Test your timing in this vibrant, minimalist arcade experience.">
+    <meta property="og:image" content="https://circle-cycles.vercel.app/assets/preview.png">
+
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://circle-cycles.vercel.app/">
+    <meta property="twitter:title" content="Circle Cycles">
+    <meta property="twitter:description" content="A game where the only skill is knowing when to let go. Test your timing in this vibrant, minimalist arcade experience.">
+    <meta property="twitter:image" content="https://circle-cycles.vercel.app/assets/preview.png">
+
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='40' stroke='white' stroke-width='8' fill='none' /%3E%3Ccircle cx='50' cy='50' r='25' stroke='%234cc9f0' stroke-width='8' fill='none' opacity='0.8'/%3E%3Ccircle cx='50' cy='50' r='6' fill='white' /%3E%3C/svg%3E">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='40' stroke='white' stroke-width='8' fill='none' /%3E%3Ccircle cx='50' cy='50' r='25' stroke='%234cc9f0' stroke-width='8' fill='none' opacity='0.8'/%3E%3Ccircle cx='50' cy='50' r='6' fill='white' /%3E%3C/svg%3E">
+
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="ui-layer">
+        <div id="overlay">
+            <div class="logo-container">
+                <svg width="100" height="100" viewBox="0 0 100 100" style="display: block;">
+                    <circle cx="50" cy="50" r="40" stroke="white" stroke-width="8" fill="none" />
+                    <circle cx="50" cy="50" r="25" stroke="#4cc9f0" stroke-width="8" fill="none" opacity="0.8"/>
+                    <circle cx="50" cy="50" r="6" fill="white" />
+                </svg>
+            </div>
+            <div class="title">CIRCLE CYCLE</div>
+            <div class="subtitle" id="status-text">A game where the only skill is knowing when to let go.</div>
+            <div class="instruction">
+                1. <strong>TAP & HOLD</strong> to grow your colored circle.<br>
+                2. <strong>RELEASE</strong> exactly when it hits the white ring.<br>
+                3. Align to Heal. Misses cost 1 HP. Max 25 HP.
+            </div>
+            
+            <div class="footer-links">
+                <span class="footer-link" id="btn-privacy">Privacy Policy</span>
+                <span class="footer-link" id="btn-about">About</span>
+                <span class="footer-link" id="btn-madeby">Made by Tedros</span>
+            </div>
+
+            <div class="tap-prompt">Tap anywhere to start</div>
+        </div>
+        
+        <div id="score-container">
+            <div id="score-display">0</div>
+            <div id="highscore-display">BEST: 0</div>
+        </div>
+
+        <div id="toast">NEW RECORD!</div>
+
+        <div id="health-bar-container">
+            <div id="health-bar"></div>
+        </div>
+    </div>
+
+    <div id="modal-privacy" class="modal-backdrop">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2>Privacy Policy</h2>
+            <p><strong>Circle Cycles</strong> is a client-side web application designed for entertainment.</p>
+            <p>We respect your privacy and adhere to the following principles:</p>
+            <ul style="padding-left: 20px; color: #ccc;">
+                <li><strong>No Data Collection:</strong> We do not collect, transmit, or store any personal data on external servers.</li>
+                <li><strong>Local Storage:</strong> Game progress (such as your high score) is stored locally on your device to enhance your experience.</li>
+                <li><strong>No Tracking:</strong> This game does not use cookies for tracking or advertising purposes.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="modal-about" class="modal-backdrop">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2>About</h2>
+            <p><strong>Circle Cycles</strong> is a minimalist rhythm and reaction game.</p>
+            <p>The goal is simple but challenging: hold to expand your circle and release exactly when it aligns with the target ring.</p>
+            <p>Designed to be a quick, meditative experience, it features dynamic color palettes, procedural audio, and increasing difficulty to test your focus and precision.</p>
+        </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script src="script.js"></script>
+</body>
+</html>

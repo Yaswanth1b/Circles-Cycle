@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://circle-cycles.vercel.app/sitemap.xml
