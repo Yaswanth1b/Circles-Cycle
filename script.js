@@ -22,11 +22,11 @@ function setupModals() {
         aboutModal.classList.remove('active');
     }
 
-    privacyBtn.addEventListener('click', (e) => openModal(privacyModal, e));
-    aboutBtn.addEventListener('click', (e) => openModal(aboutModal, e));
+    if (privacyBtn) privacyBtn.addEventListener('click', (e) => openModal(privacyModal, e));
+    if (aboutBtn) aboutBtn.addEventListener('click', (e) => openModal(aboutModal, e));
     
     // Made By - Direct Link
-    madeByBtn.addEventListener('click', (e) => {
+    if (madeByBtn) madeByBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         window.open('https://www.linkedin.com/in/yaswanth-naidu/', '_blank');
     });
@@ -155,15 +155,18 @@ let highscore = localStorage.getItem('cyrcles_highscore') || 0;
 const MAX_HEALTH = 25;
 let currentHealth = MAX_HEALTH;
 
+// SPECIAL CIRCLE MECHANICS
+let activeGoldenCircle = false;
+// activePoisonCircle removed to allow multiple instances
+
 let pulseTimer = 0;
 let activeChargeSound = null;
 let hasShownToast = false;
 
 // Configuration
-// UPDATED SPEED VALUES
 const BASE_PULSE_SPEED = 1.05; 
-const SPEED_INCREMENT = 0.01;  // Drastically reduced to prevent overlap
-const SCORE_INTERVAL = 10;     // Speed increases every 10 points
+const SPEED_INCREMENT = 0.01;
+const SCORE_INTERVAL = 10;
 const PLAYER_GROWTH_SPEED = 3.5; 
 const ALIGNMENT_TOLERANCE = 15; 
 
@@ -281,6 +284,7 @@ function resetGame() {
     playerRing = { active: false, radius: 0 };
     isHolding = false;
     hasShownToast = false;
+    activeGoldenCircle = false;
     
     // UI Update
     overlay.classList.add('hidden');
@@ -296,11 +300,31 @@ function resetGame() {
 }
 
 function spawnPulse() {
+    let isGolden = false;
+    let isPoison = false;
+
+    const rand = Math.random();
+
+    // Golden: 4% chance (0.00 to 0.04), only if no other golden exists
+    if (rand < 0.04) {
+        if (!activeGoldenCircle) {
+            isGolden = true;
+            activeGoldenCircle = true;
+        }
+        // If golden exists, this chance becomes a normal circle
+    } 
+    // Poison: 10% chance (0.04 to 0.14), can have multiple
+    else if (rand < 0.14) { 
+        isPoison = true;
+    }
+
     pulses.push({
         radius: 0,
         speed: getCurrentSpeed(), 
         alpha: 1,
-        id: Date.now()
+        id: Date.now(),
+        isGolden: isGolden,
+        isPoison: isPoison
     });
 }
 
@@ -309,8 +333,7 @@ function checkAlignment() {
     let targetIndex = -1;
 
     for (let i = 0; i < pulses.length; i++) {
-        // Ensure the pulse is reasonably large so we don't accidentally match 
-        // a brand new dot in the center against a large player ring
+        // Ensure the pulse is reasonably large
         if (pulses[i].radius > 15) {
             let diff = Math.abs(pulses[i].radius - playerRing.radius);
             if (diff < bestDiff) {
@@ -328,8 +351,23 @@ function checkAlignment() {
         fail();
     }
     
-    const color = (targetIndex !== -1 && bestDiff < ALIGNMENT_TOLERANCE) ? getCurrentColor() : '#ff4444';
-    createReleaseEffect(playerRing.radius, color);
+    // Determine effect color for the release ripple
+    const targetPulse = targetIndex !== -1 ? pulses[targetIndex] : null;
+    let effectColor = '#ff4444';
+    
+    if (targetIndex !== -1 && bestDiff < ALIGNMENT_TOLERANCE) {
+        if (targetPulse) {
+            if (targetPulse.isGolden) {
+                effectColor = '#FFD700'; // Gold
+            } else if (targetPulse.isPoison) {
+                effectColor = '#800080'; // Dark Purple (Poison)
+            } else {
+                effectColor = getCurrentColor();
+            }
+        }
+    }
+
+    createReleaseEffect(playerRing.radius, effectColor);
     
     playerRing.radius = 0;
     playerRing.active = false;
@@ -348,8 +386,25 @@ function success(diff, pulse) {
     const accuracy = 1 - (diff / ALIGNMENT_TOLERANCE);
     
     score++;
-    if (currentHealth < MAX_HEALTH) {
-        currentHealth++;
+    
+    if (pulse.isGolden) {
+        // GOLDEN CIRCLE BONUS: +10 HP
+        currentHealth = Math.min(MAX_HEALTH, currentHealth + 10);
+        activeGoldenCircle = false;
+        showToast("GOLDEN!");
+        AudioSys.playSuccess(accuracy);
+    } else if (pulse.isPoison) {
+        // POISON CIRCLE PENALTY: -10 HP (Aligned)
+        currentHealth -= 10;
+        showToast("POISON!");
+        AudioSys.playFail(); 
+        shakeScreen();
+    } else {
+        // Normal healing
+        if (currentHealth < MAX_HEALTH) {
+            currentHealth++;
+        }
+        AudioSys.playSuccess(accuracy);
     }
     
     if (score > highscore) {
@@ -362,10 +417,18 @@ function success(diff, pulse) {
         }
     }
     
-    AudioSys.playSuccess(accuracy);
     updateHealthUI();
     updateScoreUI();
-    createParticles(pulse.radius, getCurrentColor());
+    
+    // Particle color
+    let pColor = getCurrentColor();
+    if (pulse.isGolden) pColor = '#FFD700';
+    if (pulse.isPoison) pColor = '#800080';
+
+    createParticles(pulse.radius, pColor);
+    
+    // Game over check if poison killed player
+    if (currentHealth <= 0) gameOver();
 }
 
 function fail() {
@@ -486,7 +549,7 @@ function loop(timestamp) {
         pulseTimer += (1 * timeFactor);
         
         const currentSpeed = getCurrentSpeed();
-        // Adjust spawn rate to match new speed: faster pulses need faster spawns
+        // Standard Spawn Rate (20, 50 multiplier)
         const spawnRate = Math.max(20, 50 * (BASE_PULSE_SPEED / currentSpeed));
         
         if (pulses.length === 0 || pulseTimer > spawnRate) {
@@ -494,8 +557,7 @@ function loop(timestamp) {
             pulseTimer = 0;
         }
 
-        // Draw Target Pulses (White)
-        ctx.lineWidth = 2;
+        // Draw Target Pulses (White, Gold, or Poison)
         for (let i = pulses.length - 1; i >= 0; i--) {
             let p = pulses[i];
             // Move based on timeFactor
@@ -507,17 +569,55 @@ function loop(timestamp) {
 
             if (p.alpha <= 0) {
                 pulses.splice(i, 1);
-                currentHealth--; 
+                
+                // Escape Logic
+                if (p.isGolden) {
+                    // Golden Circle Escape Penalty (-10 HP)
+                    currentHealth -= 10;
+                    activeGoldenCircle = false;
+                    shakeScreen(); // Shake for heavy damage
+                } else if (p.isPoison) {
+                    // Poison Circle Escape Penalty (-1 HP) - Normal
+                    currentHealth--; 
+                } else {
+                    // Normal Circle Escape (-1 HP)
+                    currentHealth--; 
+                }
+
                 updateHealthUI();
                 if (currentHealth <= 0) gameOver();
                 continue;
             }
 
-            const opacity = p.alpha * 0.4;
-            ctx.strokeStyle = `rgba(255, 255, 255, ${opacity})`;
+            // Draw Logic
+            const opacity = p.alpha * (p.isGolden || p.isPoison ? 0.9 : 0.4); 
+            
             ctx.beginPath();
             ctx.arc(centerX, centerY, p.radius, 0, Math.PI * 2);
+            
+            if (p.isGolden) {
+                // Golden Style
+                ctx.lineWidth = 4;
+                ctx.strokeStyle = `rgba(255, 215, 0, ${opacity})`; // Gold
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = 'rgba(255, 215, 0, 0.5)';
+            } else if (p.isPoison) {
+                // Poison Style (Dark Purple)
+                ctx.lineWidth = 4;
+                ctx.strokeStyle = `rgba(128, 0, 128, ${opacity})`; // Purple/Magenta
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = 'rgba(128, 0, 128, 0.5)';
+            } else {
+                // Normal Style
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = `rgba(255, 255, 255, ${opacity})`;
+                ctx.shadowBlur = 0;
+            }
+            
             ctx.stroke();
+            
+            // Reset shadow for next draws
+            ctx.shadowBlur = 0;
         }
 
         // Draw Player Ring
