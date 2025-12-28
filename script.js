@@ -160,7 +160,10 @@ let activeChargeSound = null;
 let hasShownToast = false;
 
 // Configuration
-const BASE_PULSE_SPEED = 0.35; 
+// UPDATED SPEED VALUES
+const BASE_PULSE_SPEED = 1.05; 
+const SPEED_INCREMENT = 0.01;  // Drastically reduced to prevent overlap
+const SCORE_INTERVAL = 10;     // Speed increases every 10 points
 const PLAYER_GROWTH_SPEED = 3.5; 
 const ALIGNMENT_TOLERANCE = 15; 
 
@@ -211,8 +214,8 @@ function getCurrentColor() {
 }
 
 function getCurrentSpeed() {
-    const multiplier = Math.floor(score / 50);
-    return BASE_PULSE_SPEED + (multiplier * 0.1);
+    const multiplier = Math.floor(score / SCORE_INTERVAL);
+    return BASE_PULSE_SPEED + (multiplier * SPEED_INCREMENT);
 }
 
 // Input Handling
@@ -449,7 +452,7 @@ function shakeScreen() {
     shakeIntensity = 8;
 }
 
-// --- MAIN LOOP ---
+// --- MAIN LOOP WITH DELTA TIME ---
 let lastTime = 0;
 
 function loop(timestamp) {
@@ -473,7 +476,7 @@ function loop(timestamp) {
     const deltaTime = timestamp - lastTime;
     lastTime = timestamp;
     
-    // Limit large jumps (e.g. tab switching)
+    // Cap delta time to prevent huge jumps (e.g. tab switching)
     const safeDelta = Math.min(deltaTime, 100); 
     // Normalize to 60 FPS (16.66ms per frame)
     const timeFactor = safeDelta / (1000 / 60);
@@ -483,7 +486,8 @@ function loop(timestamp) {
         pulseTimer += (1 * timeFactor);
         
         const currentSpeed = getCurrentSpeed();
-        const spawnRate = Math.max(60, 120 * (BASE_PULSE_SPEED / currentSpeed));
+        // Adjust spawn rate to match new speed: faster pulses need faster spawns
+        const spawnRate = Math.max(20, 50 * (BASE_PULSE_SPEED / currentSpeed));
         
         if (pulses.length === 0 || pulseTimer > spawnRate) {
             spawnPulse();
@@ -494,7 +498,7 @@ function loop(timestamp) {
         ctx.lineWidth = 2;
         for (let i = pulses.length - 1; i >= 0; i--) {
             let p = pulses[i];
-            // Move based on time
+            // Move based on timeFactor
             p.radius += p.speed * timeFactor;
             
             if (p.radius > maxRadius) {
@@ -518,6 +522,7 @@ function loop(timestamp) {
 
         // Draw Player Ring
         if (isHolding) {
+            // Grow based on timeFactor
             playerRing.radius += (currentSpeed * PLAYER_GROWTH_SPEED * timeFactor);
             const currentColor = getCurrentColor();
 
